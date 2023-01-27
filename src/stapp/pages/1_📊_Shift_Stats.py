@@ -2,12 +2,15 @@ import streamlit as st
 
 import datetime
 import pandas as pd
+import plotly.io as pio
 import plotly.express as px
 
 from typing import Tuple
 
 import config as cf
 from schedexp import schedexp as sched
+
+pio.templates.default = 'seaborn'
 
 @st.experimental_memo
 def get_api_sched(start_date : datetime.date, end_date : datetime.date) -> pd.DataFrame:
@@ -51,6 +54,7 @@ with st.sidebar:
         st.error('End date must be after start date')
         st.stop()
 
+    abs_vs_rel =st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
     exclude_nonem = st.checkbox('Exclude off-service residents', value=True)
 
 st.title('Shift Statistics')
@@ -100,11 +104,20 @@ def res_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
                 barnorm=('percent' if use_relative else None))
     return plt
 
-res_cols = st.columns([2,8])
-sel_pgy = res_cols[0].selectbox('Class (PGY):', [1,2,3,4], index=1)
-abs_vs_rel = res_cols[1].radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
+sel_pgy = st.selectbox('Class (PGY):', [1,2,3,4])
+
 
 st.plotly_chart(res_cat_plot(df, sel_pgy, use_relative=(abs_vs_rel == 'Relative')))
+
+st.markdown('## Shift Totals by Class')
+
+plt = px.histogram(df, y=('PGY' + df['pgy'].astype('int').astype('str')), 
+        color='shiftType', orientation='h',
+        labels={'y': 'PGY', 'shiftType':'Shift Type'},
+        category_orders={'y': ['PGY1','PGY2','PGY3','PGY4'], 'shiftType': ['Night','Evening','Morning']},
+        barnorm=('percent' if abs_vs_rel == 'Relative' else None))
+# plt.update_layout(bargap=0.2)
+st.plotly_chart(plt)
 
 # shiftTypeCatBar = px.histogram(df, x='Resident', color='shiftType', 
 #                     nbins=len(df['userID'].unique()),
@@ -113,6 +126,3 @@ st.plotly_chart(res_cat_plot(df, sel_pgy, use_relative=(abs_vs_rel == 'Relative'
 #                     title='Shift Types by Resident', text_auto=True)
 # # shiftTypeCatBar.update_layout(bargap=0.2, yaxis_title='Number of Shifts')
 # st.plotly_chart(shiftTypeCatBar)
-
-st.dataframe(df)
-st.dataframe(df[['id','shiftStartDay', 'facilityAbbreviation']].groupby(['shiftStartDay','facilityAbbreviation']).agg('count').reset_index())
