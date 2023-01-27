@@ -1,6 +1,7 @@
 import json
 import pandas as pd
 from dataclasses import dataclass
+import typing
 
 # @dataclass
 # class Group:
@@ -25,7 +26,7 @@ def load_df_json(fn : str) -> pd.DataFrame:
     df['shiftEnd'] = pd.to_datetime(df['shiftEnd'])
     return df
 
-def full_df_to_rel(df : pd.DataFrame):
+def full_df_to_rel(df : pd.DataFrame) -> typing.Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     '''Converts a giant long DF into a set of separate tables'''
     # Group
     groups_df = df[['groupID','groupShortName']].drop_duplicates().set_index('groupID').sort_index()
@@ -35,10 +36,8 @@ def full_df_to_rel(df : pd.DataFrame):
     facs_df = df[['facilityID','facilityExtID','facilityAbbreviation']].drop_duplicates().set_index('facilityID').sort_index()
     # Shifts
     shifts_df = df[['shiftID','shiftShortName','facilityID','groupID']]
-    # shifts_df['shiftStartTime'] = shifts_df['shiftStart'].dt.time
-    # shifts_df['shiftEndTime'] = shifts_df['shiftEnd'].dt.time
-    # shifts_df.drop(['shiftStart','shiftEnd'], axis=1, inplace=True)
     shifts_df = shifts_df.drop_duplicates().set_index('shiftShortName').sort_index()
+    
     return groups_df, users_df, facs_df, shifts_df
 
 
