@@ -13,15 +13,10 @@ from schedexp import schedexp as sched
 pio.templates.default = 'seaborn'
 
 @st.experimental_memo
-def get_api_sched(start_date : datetime.date, end_date : datetime.date) -> pd.DataFrame:
-    '''Use the ShiftAdmin API to get the schedule'''
-    return sched.load_df_api(start_date, end_date)
-
-def validate_dates(start_date : datetime.date, end_date : datetime.date) -> bool:
-    '''Ensure the chosen dates are valid'''
-    return (
-        (end_date >= start_date)
-    )
+def load_schedule(start_date: datetime.date, end_date : datetime.date,
+        res : pd.DataFrame, exclude_nonem=True) -> sched.ScheduleExplorer:
+    s = sched.ScheduleExplorer(start_date, end_date, res, exclude_nonem=exclude_nonem)
+    return s
 
 @st.experimental_memo
 def get_helper_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -50,10 +45,6 @@ with st.sidebar:
     start_date = st.date_input('or you can choose a custom start date:', value=sel_start_date)
     end_date = st.date_input('and end date:', value=sel_end_date)
 
-    if not validate_dates(start_date, end_date):
-        st.error('End date must be after start date')
-        st.stop()
-
     abs_vs_rel =st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
     exclude_nonem = st.checkbox('Exclude off-service residents', value=True)
 
@@ -61,19 +52,15 @@ st.title('Shift Statistics')
 st.markdown('*Useful statistics for evaluating the schedule*')
 
 # Download the shiftadmin data
-df = get_api_sched(start_date, end_date)
-# Add PGY year
-df = df.merge(res[['userID','pgy']], how='left', on='userID')
-# Exclude non-em residents if selected
-if exclude_nonem:
-    df = df.dropna(subset=['pgy'])
-# Breakdown into relative pieces
-# groups, users, facs, shifts = sched.full_df_to_rel(df)
+try:
+    s = load_schedule(start_date, end_date, res, exclude_nonem=exclude_nonem)
+except sched.ScheduleExplorerError:
+    st.error('End Data must come after Start Date')
+    st.stop()
 
-st.markdown(f'Between **{start_date}** and **{end_date}**, there are **{len(df)}** scheduled shifts, ' +
-    ('**for EM residents**, ' if exclude_nonem else '') +
-    f'totaling **{int(df["shiftHours"].sum())}** person-hours ' +
-    f'across **{len(df["userID"].unique())}** residents.')
+st.markdown(f'Between **{start_date}** and **{end_date}**, there are **{s.n_shifts}** scheduled shifts, ' +
+    f'totaling **{int(s.person_hours)}** person-hours ' +
+    f'across **{s.n_residents}** residents.')
 
 # st.markdown('## Shift Totals by Date')
 
@@ -96,18 +83,19 @@ st.markdown(f'Between **{start_date}** and **{end_date}**, there are **{len(df)}
 
 st.markdown('## Shift Totals by Resident')
 
-def res_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
-    # df_pgy = df.merge(res[['userID','pgy']], how='inner', on='userID')
-    df_pgy = df[df['pgy'] == pgy].sort_values('lastName', ascending=False)
-    plt = px.histogram(df_pgy, y='Resident', color='shiftType', 
-                orientation='h', category_orders={'shiftType': ['Night','Evening','Morning']},
-                barnorm=('percent' if use_relative else None))
-    return plt
+# def res_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
+#     # df_pgy = df.merge(res[['userID','pgy']], how='inner', on='userID')
+#     df_pgy = df[df['pgy'] == pgy].sort_values('lastName', ascending=False)
+#     plt = px.histogram(df_pgy, y='Resident', color='shiftType', 
+#                 orientation='h', category_orders={'shiftType': ['Night','Evening','Morning']},
+#                 barnorm=('percent' if use_relative else None))
+#     return plt
 
 sel_pgy = st.selectbox('Class (PGY):', [1,2,3,4])
+blah = s.shift_totals_by(['Resident','shiftType'], query=f'pgy == {sel_pgy}').sort_values('Resident', ascending=False)
+st.plotly_chart(px.bar(blah, y='Resident', x='Count', color='shiftType'))
 
-
-st.plotly_chart(res_cat_plot(df, sel_pgy, use_relative=(abs_vs_rel == 'Relative')))
+# st.plotly_chart(res_cat_plot(df, sel_pgy, use_relative=(abs_vs_rel == 'Relative')))
 
 st.markdown('## Shift Totals by Class')
 
