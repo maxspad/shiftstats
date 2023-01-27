@@ -27,7 +27,16 @@ API_STRFTIME = '%Y-%m-%d'
 def _json_to_df(data : dict) -> pd.DataFrame:
     df = pd.json_normalize(data['data']['scheduledShifts'])
     df['shiftStart'] = pd.to_datetime(df['shiftStart'])
+    df['shiftStartDay'] = df['shiftStart'].dt.date
+    df['shiftType'] = df['shiftStart'].dt.hour.map(lambda x: 'Night' if x >= 20 else ('Evening' if x >= 11 else 'Morning'))
+    # df['isMorning'] = df['shiftStart'].dt.hour < 12
+    # df['isEvening'] = (df['shiftStart'].dt.hour >= 12) & ~(df['isNight'])
+    # df['shiftStartTime'] = df['shiftStart'].dt.time
     df['shiftEnd'] = pd.to_datetime(df['shiftEnd'])
+    df['shiftEndDay'] = df['shiftEnd'].dt.date
+
+    df['Resident'] = df['firstName'].str[0] + '. ' + df['lastName']
+    # df['shiftEndTime'] = df['shiftEnd'].dt.time
     return df
 
 def load_df_json_file(fn : str) -> pd.DataFrame: 
