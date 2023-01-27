@@ -64,6 +64,15 @@ def full_df_to_rel(df : pd.DataFrame) -> typing.Tuple[pd.DataFrame, pd.DataFrame
     
     return groups_df, users_df, facs_df, shifts_df
 
+def load_block_dates(fn : str) -> pd.DataFrame:
+    bd = pd.read_csv(fn, parse_dates=['Start Date', 'End Date', 'Mid-transition Start Date'])
+    bd.rename({'Mid-transition Start Date': 'Mid-Block Transition Date'}, axis=1, inplace=True)
+    return bd
+
+def load_residents(fn : str) -> pd.DataFrame:
+    res = pd.read_csv(fn).reset_index()
+    return res
+
 if __name__ == '__main__':
     start_date = datetime.date.today()
     end_date = datetime.date.today() + datetime.timedelta(days=7)
