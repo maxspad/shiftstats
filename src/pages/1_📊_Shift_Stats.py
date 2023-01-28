@@ -75,8 +75,18 @@ except sched.ScheduleError:
 st.markdown(f'Between **{start_date}** and **{end_date}**, there are **{len(s)}** shifts, ' +
     f'totaling **{int(s["Length"].sum())}** person-hours ' +
     f'across **{len(s["Resident"].unique())}** residents.')
+pgy_counts = s['PGY'].value_counts()
+pgy_norm = s['PGY'].value_counts(normalize=True) * 100
+tod_counts = s['Type'].value_counts()
+tod_norm = s['Type'].value_counts(normalize=True) * 100
+site_counts = s['Site'].value_counts()
+site_norm = s['Site'].value_counts(normalize=True) * 100
+md_breakdown_str = ('\t* By class, ' + ', '.join([f'**{pgy_counts[i+1]}** ({pgy_norm[i+1]:.0f}%) are worked by PGY{i+1}s' for i in range(4)]) + '.\n' +
+                   '\t* By time of day, ' + ', '.join([f'**{tod_counts[t]}** ({tod_norm[t]:.0f}%) are {t} shifts' for t in ['Morning','Evening','Night']]) + '.\n' +
+                   '\t* By site, ' + ', '.join([f'**{site_counts[s]}** ({site_norm[s]:.0f}%) are at {s}' for s in ['UM','SJ','HMC']]) + '.')
+st.markdown(md_breakdown_str)
 
-cols = st.columns(2)
+cols = st.columns([2,2,6])
 sel_exp_type = cols[0].selectbox('Explore shift totals by:',
     ['Time of Day', 'Site'])
 sel_class = cols[1].selectbox('Filter to class:',
@@ -85,17 +95,9 @@ sel_class = cols[1].selectbox('Filter to class:',
 plot_func = h.res_type_cat_plot if sel_exp_type == 'Time of Day' else h.res_site_cat_plot
 
 st.markdown(f'## Shift Totals by {sel_exp_type}')
+st.caption(f'Between {start_date} and {end_date}')
 
-if sel_class == 'All':
-    h.two_by_two_plot(plot_func, s, use_relative=use_rel)
-else:
-    st.plotly_chart(plot_func(s, sel_class, use_relative=use_rel))
-
-# st.markdown('### Time of Day (Morning/Evening/Night)')
-
-# h.two_by_two_plot(h.res_type_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
-
-# st.markdown('### Sites (UM/SJ/Hurley)')
-
-
-# h.two_by_two_plot(h.res_site_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
+# if sel_class == 'All':
+h.two_by_two_plot(plot_func, s, use_relative=use_rel)
+# else:
+    # st.plotly_chart(plot_func(s, sel_class, use_relative=use_rel))
