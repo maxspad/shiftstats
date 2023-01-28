@@ -50,6 +50,7 @@ with st.sidebar:
     end_date = st.date_input('and end date:', value=sel_end_date)
 
     abs_vs_rel =st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
+    use_rel = (abs_vs_rel == 'Relative')
     exclude_nonem = st.checkbox('Exclude off-service residents', value=True)
 
 st.title('Shift Statistics')
@@ -66,13 +67,26 @@ st.markdown(f'Between **{start_date}** and **{end_date}**, there are **{len(s)}*
     f'totaling **{int(s["Length"].sum())}** person-hours ' +
     f'across **{len(s["Resident"].unique())}** residents.')
 
-st.markdown('## Shift Totals by Resident')
+cols = st.columns(2)
+sel_exp_type = cols[0].selectbox('Explore shift totals by:',
+    ['Time of Day', 'Site'])
+sel_class = cols[1].selectbox('Filter to class:',
+    ['All',1,2,3,4], format_func=lambda x: f'PGY{x}' if type(x) == int else x)
 
-st.markdown('### Time of Day (Morning/Evening/Night)')
+plot_func = h.res_type_cat_plot if sel_exp_type == 'Time of Day' else h.res_site_cat_plot
 
-h.two_by_two_plot(h.res_type_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
+st.markdown(f'## Shift Totals by {sel_exp_type}')
 
-st.markdown('### Sites (UM/SJ/Hurley)')
+if sel_class == 'All':
+    h.two_by_two_plot(plot_func, s, use_relative=use_rel)
+else:
+    st.plotly_chart(plot_func(s, sel_class, use_relative=use_rel))
+
+# st.markdown('### Time of Day (Morning/Evening/Night)')
+
+# h.two_by_two_plot(h.res_type_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
+
+# st.markdown('### Sites (UM/SJ/Hurley)')
 
 
-h.two_by_two_plot(h.res_site_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
+# h.two_by_two_plot(h.res_site_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
