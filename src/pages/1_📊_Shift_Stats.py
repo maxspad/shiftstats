@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.io as pio
 import plotly.express as px
 
-from typing import Tuple
+from typing import Tuple, Callable
 
 import config as cf
 import schedexp as sched
@@ -30,7 +30,7 @@ def get_helper_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     return bd, res
 
 # Set Title 
-st.set_page_config(page_title='Shift Statistics', page_icon='📊')
+st.set_page_config(page_title='Shift Statistics', page_icon='📊', layout='wide')
 
 # Load helper data
 bd, res = get_helper_data()
@@ -67,48 +67,34 @@ st.markdown(f'Between **{start_date}** and **{end_date}**, there are **{len(s)}*
     f'across **{len(s["Resident"].unique())}** residents.')
 
 st.markdown('## Shift Totals by Resident')
-sel_pgy = st.selectbox('Class (PGY):', [1,2,3,4])
 
 st.markdown('### Time of Day (Morning/Evening/Night)')
+
+def two_by_two_plot(plot_func : Callable, df : pd.DataFrame, use_relative=False):
+    cols = st.columns(2)
+    for i, c in enumerate(cols):
+        c.plotly_chart(plot_func(df, i+1, use_relative=use_relative), use_container_width=True)
+    cols = st.columns(2)
+    for i, c in enumerate(cols):
+        c.plotly_chart(plot_func(df, i+3, use_relative=use_relative), use_container_width=True)
 
 def res_type_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
     df_pgy = df[df['PGY'] == pgy].sort_values('Last Name', ascending=False)
     plt = px.histogram(df_pgy, y='Resident', color='Type', 
                 orientation='h', category_orders={'Type': ['Night','Evening','Morning']},
-                barnorm=('percent' if use_relative else None))
+                barnorm=('percent' if use_relative else None),
+                title=f'Shifts by Time of Day: PGY {pgy}')
     return plt
 
-st.plotly_chart(res_type_cat_plot(s, sel_pgy, use_relative=(abs_vs_rel == 'Relative')))
+two_by_two_plot(res_type_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
 
 st.markdown('### Sites (UM/SJ/Hurley)')
 def res_site_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
     df_pgy = df[df['PGY'] == pgy].sort_values('Last Name', ascending=False)
     plt = px.histogram(df_pgy, y='Resident', color='Site', 
                 orientation='h', category_orders={'Site': ['UM','SJ','HMC']},
-                barnorm=('percent' if use_relative else None))
+                barnorm=('percent' if use_relative else None),
+                title=f'Shifts by Site: PGY {pgy}')
     return plt
 
-st.plotly_chart(res_site_cat_plot(s, sel_pgy, use_relative=(abs_vs_rel == 'Relative')))
-
-cols = st.columns([5,5])
-cols[0].plotly_chart(res_site_cat_plot(s, 1, use_relative=(abs_vs_rel == 'Relative')), use_container_width=True)
-cols[1].plotly_chart(res_site_cat_plot(s, 2, use_relative=(abs_vs_rel == 'Relative')), use_container_width=True)
-st.markdown('## Shift Totals by Class')
-st.markdown('*Does not include off-service residents*')
-
-s_no_os = s.dropna(subset=['PGY'])
-plt = px.histogram(s_no_os, y=('PGY' + s_no_os['PGY'].astype('int').astype('str')), 
-        color='Type', orientation='h',
-        labels={'y': 'PGY'},
-        category_orders={'y': ['PGY1','PGY2','PGY3','PGY4'], 'Type': ['Night','Evening','Morning']},
-        barnorm=('percent' if abs_vs_rel == 'Relative' else None))
-# plt.update_layout(bargap=0.2)
-st.plotly_chart(plt)
-
-# shiftTypeCatBar = px.histogram(df, x='Resident', color='shiftType', 
-#                     nbins=len(df['userID'].unique()),
-#                     labels={'shiftType': 'Shift Type', 'userID': 'Resident'},
-#                     category_orders={'shiftType':['Morning','Evening','Night']},
-#                     title='Shift Types by Resident', text_auto=True)
-# # shiftTypeCatBar.update_layout(bargap=0.2, yaxis_title='Number of Shifts')
-# st.plotly_chart(shiftTypeCatBar)
+two_by_two_plot(res_site_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))

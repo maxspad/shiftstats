@@ -6,27 +6,50 @@ from dataclasses import dataclass
 import typing as t
 import datetime 
 import requests
+import logging as log
 
 
 _API_URL = 'https://www.shiftadmin.com/api_getscheduledshifts_json.php'
 _API_VALIDATION_KEY = 'UMICH_jrmacyu77w'
-_API_GID = 1
+_API_UM_GID = 1
+_API_HMC_GID = 9
 _API_STRFTIME = '%Y-%m-%d'
 
 class ScheduleError(ValueError):
     pass
 
 
-def load_sched_api(start_date : datetime.date, end_date : datetime.date) -> pd.DataFrame:
+def load_sched_api(start_date : datetime.date, end_date : datetime.date,
+    remove_nonum_hurley=True) -> pd.DataFrame:
     # Sanity check the dates
     if end_date < start_date:
         raise ScheduleError('End Date must come after Start Date')
 
-    params = {'validationKey': _API_VALIDATION_KEY, 'gid': _API_GID, 
+    log.info('ShiftAdmin request for UM...')
+    params = {'validationKey': _API_VALIDATION_KEY, 'gid': _API_UM_GID, 
         'sd': start_date.strftime(_API_STRFTIME), 'ed': end_date.strftime(_API_STRFTIME)}
+    log.debug(f'Parameters: {params}')
     r = requests.get(_API_URL, params=params)
+    log.debug(f'URL: {r.url}')
     data = r.json()
-    df = _json_to_df(data)
+    df_um = _json_to_df(data)
+    log.info(f'Done. Got {len(df_um)} shifts.')
+
+    log.info('ShiftAdmin request for HMC...')
+    params['gid'] = _API_HMC_GID
+    log.debug(f'Parameters: {params}')
+    r = requests.get(_API_URL, params=params)
+    log.debug(f'URL: {r.url}')
+    data = r.json()
+    df_hmc = _json_to_df(data)
+    log.info(f'Done. Got {len(df_hmc)} shifts')
+
+    if remove_nonum_hurley:
+        log.info('Removing non UM shifts from HMC schedule...')
+        df_hmc = df_hmc[df_hmc['shiftShortName'].str.contains(' M')]
+        log.info(f'{len(df_hmc)} shifts remaining')
+
+    df = pd.concat([df_um, df_hmc])
 
     # Clean and add extra columns
     df = _postproc_df(df)
