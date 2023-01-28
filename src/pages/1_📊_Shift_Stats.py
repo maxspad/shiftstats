@@ -34,24 +34,33 @@ st.set_page_config(page_title='Shift Statistics', page_icon='📊', layout='wide
 
 # Load helper data
 bd, res = get_helper_data()
+bd.index = [f'Block {b}' for b in bd.index]
 
 # Configure sidebar
 with st.sidebar:
     bd_list = {
-        f'Block {b}: {r["Start Date"].date()} to {r["End Date"].date()}' : b
+        f'{b}: {r["Start Date"].date()} to {r["End Date"].date()}' : b
         for b, r in bd.iterrows()
     }
-    sel = st.selectbox('Choose a block:', bd_list.keys())
+    bd_list['Custom Date Range'] = 'Custom'
+    bd_list['Year to Date'] = 'YTD'
+    sel = st.selectbox('Choose a block or date range:', bd_list.keys())
     sel_block = bd_list[sel]
-    sel_start_date = bd.loc[sel_block,'Start Date']
-    sel_end_date = bd.loc[sel_block,'End Date']
-
-    start_date = st.date_input('or you can choose a custom start date:', value=sel_start_date)
-    end_date = st.date_input('and end date:', value=sel_end_date)
+    if sel_block == 'YTD':
+        start_date = datetime.date(2022, 7, 1)
+        end_date = datetime.date.today()
+    elif sel_block == 'Custom':
+        start_date = st.date_input('Custom start date:', value=datetime.date.today())
+        end_date = st.date_input('Custom end date:', value=datetime.date.today() + datetime.timedelta(days=14))
+    else:
+        start_date = bd.loc[sel_block,'Start Date']
+        end_date = bd.loc[sel_block,'End Date']
+    # sel_start_date = bd.loc[sel_block,'Start Date']
+    # sel_end_date = bd.loc[sel_block,'End Date']
 
     abs_vs_rel =st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
     use_rel = (abs_vs_rel == 'Relative')
-    exclude_nonem = st.checkbox('Exclude off-service residents', value=True)
+    exclude_nonem = True # st.checkbox('Exclude off-service residents', value=True)
 
 st.title('Shift Statistics')
 st.markdown('*Useful statistics for evaluating the schedule*')
