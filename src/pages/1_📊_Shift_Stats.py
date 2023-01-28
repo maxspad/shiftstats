@@ -3,10 +3,10 @@ import streamlit as st
 import datetime
 import pandas as pd
 import plotly.io as pio
-import plotly.express as px
 
-from typing import Tuple, Callable
+from typing import Tuple
 
+import helpers as h
 import config as cf
 import schedexp as sched
 
@@ -70,31 +70,9 @@ st.markdown('## Shift Totals by Resident')
 
 st.markdown('### Time of Day (Morning/Evening/Night)')
 
-def two_by_two_plot(plot_func : Callable, df : pd.DataFrame, use_relative=False):
-    cols = st.columns(2)
-    for i, c in enumerate(cols):
-        c.plotly_chart(plot_func(df, i+1, use_relative=use_relative), use_container_width=True)
-    cols = st.columns(2)
-    for i, c in enumerate(cols):
-        c.plotly_chart(plot_func(df, i+3, use_relative=use_relative), use_container_width=True)
-
-def res_type_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
-    df_pgy = df[df['PGY'] == pgy].sort_values('Last Name', ascending=False)
-    plt = px.histogram(df_pgy, y='Resident', color='Type', 
-                orientation='h', category_orders={'Type': ['Night','Evening','Morning']},
-                barnorm=('percent' if use_relative else None),
-                title=f'Shifts by Time of Day: PGY {pgy}')
-    return plt
-
-two_by_two_plot(res_type_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
+h.two_by_two_plot(h.res_type_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
 
 st.markdown('### Sites (UM/SJ/Hurley)')
-def res_site_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
-    df_pgy = df[df['PGY'] == pgy].sort_values('Last Name', ascending=False)
-    plt = px.histogram(df_pgy, y='Resident', color='Site', 
-                orientation='h', category_orders={'Site': ['UM','SJ','HMC']},
-                barnorm=('percent' if use_relative else None),
-                title=f'Shifts by Site: PGY {pgy}')
-    return plt
 
-two_by_two_plot(res_site_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
+
+h.two_by_two_plot(h.res_site_cat_plot, s, use_relative=(abs_vs_rel == 'Relative'))
