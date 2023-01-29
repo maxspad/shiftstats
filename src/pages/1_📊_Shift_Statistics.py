@@ -37,14 +37,19 @@ st.set_page_config(page_title='Shift Statistics', page_icon='📊', layout='wide
 bd, res = get_helper_data()
 bd.index = [f'Block {b}' for b in bd.index]
 
+DATE_FMT = "%m/%d/%y"
+
 # Configure sidebar
 with st.sidebar:
-    bd_list = {
-        f'{b}: {r["Start Date"].date()} to {r["End Date"].date()}' : b
-        for b, r in bd.iterrows()
-    }
-    bd_list['Custom Date Range'] = 'Custom'
-    bd_list['Year to Date'] = 'YTD'
+    bd_list = {f'Year to Date: {datetime.date(2022, 7, 1).strftime(DATE_FMT)} to {datetime.date.today().strftime(DATE_FMT)}': 'YTD', 'Custom Date Range': 'Custom'}
+    for b, r in bd.iterrows():
+        bd_list[f'{b}: {r["Start Date"].strftime(DATE_FMT)} to {r["End Date"].strftime(DATE_FMT)}'] = b
+    # bd_list = {
+    #     f'{b}: {r["Start Date"].date()} to {r["End Date"].date()}' : b
+    #     for b, r in bd.iterrows()
+    # }
+    # bd_list['Custom Date Range'] = 'Custom'
+    # bd_list['Year to Date'] = 'YTD'
     sel = st.selectbox('Choose a block or date range:', bd_list.keys())
     sel_block = bd_list[sel]
     if sel_block == 'YTD':
@@ -56,13 +61,10 @@ with st.sidebar:
     else:
         start_date = bd.loc[sel_block,'Start Date']
         end_date = bd.loc[sel_block,'End Date']
-
-    # abs_vs_rel =st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
-    # use_rel = (abs_vs_rel == 'Relative')
     exclude_nonem = True # st.checkbox('Exclude off-service residents', value=True)
 
-st.title('Shift Statistics')
-st.markdown('*Useful statistics for evaluating the schedule*')
+st.title(f'Shift Breakdown')
+st.markdown('*Useful statistics for evaluating the schedule. Use the sidebar on the left to fiilter by date range, and make sure to scroll down!*')
 st.markdown('Jump to breakdown by:&nbsp;&nbsp;[Overall](#overall-shift-breakdown) | [Class](#shift-breakdown-by-class) | [Resident](#shift-breakdown-by-resident)')
 
 # Download the shiftadmin data
@@ -74,7 +76,7 @@ except sched.ScheduleError:
 
 st.markdown('## Overall Shift Breakdown')
 
-st.markdown(f'Between **{start_date}** and **{end_date}**, there are **{len(s)}** shifts, ' +
+st.markdown(f'Between **{start_date.strftime(DATE_FMT)}** and **{end_date.strftime(DATE_FMT)}**, there are **{len(s)}** shifts, ' +
     f'totaling **{int(s["Length"].sum())}** person-hours ' +
     f'across **{len(s["Resident"].unique())}** residents.')
 pgy_counts = s['PGY'].value_counts().sort_index()
@@ -115,8 +117,8 @@ cols[2].plotly_chart(plt, use_container_width=True)
 st.markdown('## Shift Breakdown by *Class*')
 st.markdown('Shift counts by class, broken down by site and time of day.')
 
-abs_vs_rel_by_class =st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
-use_rel_by_class = (abs_vs_rel_by_class == 'Relative')
+abs_vs_rel_by_class =st.radio('Show shift counts as:', ('Raw Counts','Percents'), horizontal=True)
+use_rel_by_class = (abs_vs_rel_by_class == 'Percents')
 
 cols = st.columns(2)
 plt = px.histogram(s, y='PGY', color='Site',
@@ -144,16 +146,13 @@ st.markdown('Shift counts by individual resident')
 
 cols = st.columns([2,2,6])
 with cols[0]:
-    abs_vs_rel_by_res = st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True, key='res_radio')
-    use_rel_by_res = (abs_vs_rel_by_res == 'Relative')
+    abs_vs_rel_by_res = st.radio('Show shift counts as:', ('Raw Counts','Percents'), horizontal=True, key='res_radio')
+    use_rel_by_res = (abs_vs_rel_by_res == 'Percents')
 with cols[1]:
     sel_exp_type = st.selectbox('Explore shift totals by:',
         ['Time of Day', 'Site'])
 
 plot_func = h.res_type_cat_plot if sel_exp_type == 'Time of Day' else h.res_site_cat_plot
-
-st.markdown(f'## Shift Totals by {sel_exp_type}')
-st.caption(f'Between {start_date} and {end_date}')
 
 # if sel_class == 'All':
 h.two_by_two_plot(plot_func, s, use_relative=use_rel_by_res)
