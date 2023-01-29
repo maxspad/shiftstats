@@ -39,6 +39,21 @@ def res_site_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
                 color_discrete_sequence=['#22577A','#754043','#B3BFB8'])
     return plt
 
+def res_shift_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
+    df_pgy = df[df['PGY'] == pgy].sort_values('Last Name', ascending=False)
+    df_pgy = df_pgy[df['Site'] == 'UM']
+    df_pgy['Area'] = df_pgy['Shift'].copy()
+    df_pgy.loc[df_pgy['Area'].str.contains('EC3'), 'Area'] = 'EC3'
+    df_pgy.loc[df_pgy['Area'].isin(['UT','UV','UW']), 'Area'] = 'STAR'
+    df_pgy.loc[df_pgy['Area'].isin(['UR','UF']), 'Area'] = 'Float'
+    df_pgy.loc[~df_pgy['Area'].isin(['EC3','STAR','Float']), 'Area'] = 'Main'
+    plt = px.histogram(df_pgy, y='Resident', color='Area', 
+                orientation='h', # category_orders={'Site': ['UM','SJ','HMC']},
+                barnorm=('percent' if use_relative else None),
+                title=f'Shift Allocations: PGY {pgy}')
+                # color_discrete_sequence=['#22577A','#754043','#B3BFB8'])
+    return plt
+
 class CheckGroup:
 
     def __init__(self, values, labels : Collection[str], caption=None, horizontal=True):

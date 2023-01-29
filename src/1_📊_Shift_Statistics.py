@@ -145,9 +145,12 @@ with cols[0]:
     use_rel_by_res = (abs_vs_rel_by_res == 'Percents')
 with cols[1]:
     sel_exp_type = st.selectbox('Explore shift totals by:',
-        ['Time of Day', 'Site'])
+        ['Time of Day', 'Site', 'Shift Area (UM Only)'])
 
-plot_func = h.res_type_cat_plot if sel_exp_type == 'Time of Day' else h.res_site_cat_plot
+plot_func = {'Time of Day': h.res_type_cat_plot,
+             'Site': h.res_site_cat_plot,
+             'Shift Area (UM Only)': h.res_shift_cat_plot}[sel_exp_type]
+# plot_func = h.res_type_cat_plot if sel_exp_type == 'Time of Day' else h.res_site_cat_plot
 
 # if sel_class == 'All':
 h.two_by_two_plot(plot_func, s, use_relative=use_rel_by_res)
