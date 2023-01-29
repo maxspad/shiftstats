@@ -2,6 +2,7 @@ import streamlit as st
 
 import datetime
 import pandas as pd
+import plotly.express as px
 import plotly.io as pio
 
 from typing import Tuple
@@ -55,18 +56,14 @@ with st.sidebar:
     else:
         start_date = bd.loc[sel_block,'Start Date']
         end_date = bd.loc[sel_block,'End Date']
-    # sel_start_date = bd.loc[sel_block,'Start Date']
-    # sel_end_date = bd.loc[sel_block,'End Date']
 
-    # cg = h.CheckGroup(values=[1,2,3,4], labels=['PGY1','PGY2','PGY3','PGY4'], 
-            # caption='Filter by Class:', horizontal=False)
-
-    abs_vs_rel =st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
-    use_rel = (abs_vs_rel == 'Relative')
+    # abs_vs_rel =st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
+    # use_rel = (abs_vs_rel == 'Relative')
     exclude_nonem = True # st.checkbox('Exclude off-service residents', value=True)
 
 st.title('Shift Statistics')
 st.markdown('*Useful statistics for evaluating the schedule*')
+st.markdown('Jump to breakdown by:&nbsp;&nbsp;[Overall](#overall-shift-breakdown) | [Class](#shift-breakdown-by-class) | [Resident](#shift-breakdown-by-resident)')
 
 # Download the shiftadmin data
 try:
@@ -74,9 +71,6 @@ try:
 except sched.ScheduleError:
     st.error('End Date must come after Start Date')
     st.stop()
-
-
-# s = s[s['PGY'].isin(cg.get_selected())]
 
 st.markdown('## Overall Shift Breakdown')
 
@@ -94,50 +88,67 @@ md_breakdown_str = ('\t* By class, ' + ', '.join([f'**{pgy_counts[i]}** ({pgy_no
                    '\t* By site, ' + ', '.join([f'**{site_counts[s]}** ({site_norm[s]:.0f}%) are at {s}' for s in ['UM','SJ','HMC']]) + '.')
 st.markdown(md_breakdown_str)
 
-import plotly.express as px
-
 cols = st.columns(3)
 
-# plt = px.pie(pgy_counts.reset_index(), values='PGY', names='index', hole=0.3,  
-#         title='Shifts by Class')
-# plt = px.bar(pgy_counts.reset_index().rename({'index':'PGY', 'PGY':'Number of Shifts'}, axis=1), x='PGY', y='Number of Shifts', color='PGY', title='Shifts by Class')
 plt = px.histogram(s, x='PGY', color='PGY',
         title='Shifts by Class',
         category_orders={'PGY':[1,2,3,4]},
-        color_discrete_map=h.PGY_COLORS_MAP)
+        color_discrete_map=h.PGY_COLORS_MAP,
+        text_auto='.0f')
 plt.update_layout(bargap=0.2)
 cols[0].plotly_chart(plt, use_container_width=True)
 
-# plt = px.pie(tod_counts.reset_index(), values='Type', names='index', hole=0.3, 
-#         color_discrete_sequence=[h.TOD_COLORS_MAP[t] for t in tod_counts.index], 
-#         title='Shifts by Time of Day')
 plt = px.histogram(s, x='Type', color='Type',
         color_discrete_map=h.TOD_COLORS_MAP,
-        title='Shifts by Time of Day')
-# plt = px.bar(tod_counts.reset_index().rename({'index': 'Time of Day', 'Type':'Number of Shifts'}, axis=1),
-            # x='Time of Day', y='Number of Shifts', color='Time of Day',
-            # color_discrete_sequence=[h.TOD_COLORS_MAP[t] for t in tod_counts.index],
-            # title='Shifts by Time of Day',
-            # category_orders=['Morning','Evening','Night'])
+        title='Shifts by Time of Day',
+        text_auto='.0f')
 cols[1].plotly_chart(plt, use_container_width=True)
 
 plt = px.histogram(s, x='Site', color='Site',
         color_discrete_map=h.SITE_COLORS_MAP,
-        title='Shifts by Site')
-# plt = px.pie(site_counts.reset_index(), values='Site', names='index', hole=0.3, 
-#         color_discrete_sequence=[h.SITE_COLORS_MAP[s] for s in site_counts.index], 
-#         title='Shifts by Site')
+        title='Shifts by Site',
+        text_auto='.0f')
 cols[2].plotly_chart(plt, use_container_width=True)
 
+###############################################################################
+
 st.markdown('## Shift Breakdown by *Class*')
+st.markdown('Shift counts by class, broken down by site and time of day.')
+
+abs_vs_rel_by_class =st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True)
+use_rel_by_class = (abs_vs_rel_by_class == 'Relative')
+
+cols = st.columns(2)
+plt = px.histogram(s, y='PGY', color='Site',
+        color_discrete_map=h.SITE_COLORS_MAP,
+        orientation='h',
+        title='Shift Counts by Site and Class',
+        barnorm=('percent' if use_rel_by_class else None),
+        text_auto=".0f")
+plt.update_layout(bargap=0.2)
+cols[0].plotly_chart(plt, use_container_width=True)
+
+plt = px.histogram(s, y='PGY', color='Type',
+        color_discrete_map=h.TOD_COLORS_MAP,
+        orientation='h',
+        title='Shift Counts by Time of Day and Class',
+        barnorm=('percent' if use_rel_by_class else None),
+        text_auto='.0f')
+plt.update_layout(bargap=0.2)
+cols[1].plotly_chart(plt, use_container_width=True)
+
+###############################################################################
 
 st.markdown('## Shift Breakdown by *Resident*')
 st.markdown('Shift counts by individual resident')
+
 cols = st.columns([2,2,6])
-sel_exp_type = cols[0].selectbox('Explore shift totals by:',
-    ['Time of Day', 'Site'])
-sel_class = cols[1].selectbox('Filter to class:',
-    ['All',1,2,3,4], format_func=lambda x: f'PGY{x}' if type(x) == int else x)
+with cols[0]:
+    abs_vs_rel_by_res = st.radio('Show shift counts as:', ('Absolute','Relative'), horizontal=True, key='res_radio')
+    use_rel_by_res = (abs_vs_rel_by_res == 'Relative')
+with cols[1]:
+    sel_exp_type = st.selectbox('Explore shift totals by:',
+        ['Time of Day', 'Site'])
 
 plot_func = h.res_type_cat_plot if sel_exp_type == 'Time of Day' else h.res_site_cat_plot
 
@@ -145,6 +156,6 @@ st.markdown(f'## Shift Totals by {sel_exp_type}')
 st.caption(f'Between {start_date} and {end_date}')
 
 # if sel_class == 'All':
-h.two_by_two_plot(plot_func, s, use_relative=use_rel)
+h.two_by_two_plot(plot_func, s, use_relative=use_rel_by_res)
 # else:
     # st.plotly_chart(plot_func(s, sel_class, use_relative=use_rel))
