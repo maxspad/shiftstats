@@ -44,20 +44,15 @@ with st.sidebar:
     bd_list = {f'Year to Date: {datetime.date(2022, 7, 1).strftime(DATE_FMT)} to {datetime.date.today().strftime(DATE_FMT)}': 'YTD', 'Custom Date Range': 'Custom'}
     for b, r in bd.iterrows():
         bd_list[f'{b}: {r["Start Date"].strftime(DATE_FMT)} to {r["End Date"].strftime(DATE_FMT)}'] = b
-    # bd_list = {
-    #     f'{b}: {r["Start Date"].date()} to {r["End Date"].date()}' : b
-    #     for b, r in bd.iterrows()
-    # }
-    # bd_list['Custom Date Range'] = 'Custom'
-    # bd_list['Year to Date'] = 'YTD'
+
     sel = st.selectbox('Choose a block or date range:', bd_list.keys())
     sel_block = bd_list[sel]
     if sel_block == 'YTD':
         start_date = datetime.date(2022, 7, 1)
         end_date = datetime.date.today()
     elif sel_block == 'Custom':
-        start_date = st.date_input('Custom start date:', value=datetime.date.today())
-        end_date = st.date_input('Custom end date:', value=datetime.date.today() + datetime.timedelta(days=14))
+        start_date = st.date_input('Custom start date:', value=datetime.date(2022, 7, 1))
+        end_date = st.date_input('Custom end date:', value=datetime.date.today())
     else:
         start_date = bd.loc[sel_block,'Start Date']
         end_date = bd.loc[sel_block,'End Date']
