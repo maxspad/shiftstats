@@ -1,7 +1,14 @@
 import pandas as pd
-from typing import Callable
+from typing import Callable, Collection
 import streamlit as st
 import plotly.express as px
+
+SITE_COLORS = ['#22577A','#754043','#B3BFB8']
+SITE_COLORS_MAP = {s : c for s, c in zip(['UM','SJ','HMC'], SITE_COLORS)}
+TOD_COLORS = ['#002629','#C5C9BB','#E6AF2E']
+TOD_COLORS_MAP = {t : c for t, c in zip(['Night','Evening','Morning'], TOD_COLORS)}
+PGY_COLORS = ['#C0C1D8','#7476AA','#474973','#161B33']
+PGY_COLORS_MAP = {p : c for p, c in zip([1,2,3,4], PGY_COLORS)}
 
 def two_by_two_plot(plot_func : Callable, df : pd.DataFrame, use_relative=False):
     cols = st.columns(2)
@@ -31,3 +38,28 @@ def res_site_cat_plot(df : pd.DataFrame, pgy : int, use_relative=False):
                 title=f'Shifts by Site: PGY {pgy}',
                 color_discrete_sequence=['#22577A','#754043','#B3BFB8'])
     return plt
+
+class CheckGroup:
+
+    def __init__(self, values, labels : Collection[str], caption=None, horizontal=True):
+        self._values = values
+        self._labels = labels
+        self._lab_to_val = {lab : val for lab, val in zip(labels, values)}
+        if caption is not None:
+            st.caption(caption)
+        if horizontal:
+            cols = st.columns(4)
+        else:
+            cols = [st,st,st,st]
+        self._check_res = {lab : c.checkbox(lab) for lab, c in zip(labels, cols)}
+
+    def __getitem__(self, label): 
+        return self._check_res[label]
+
+    def get_selected(self):
+        toRet = []
+        for lab in self._check_res:
+            if self._check_res[lab]:
+                toRet.append(self._lab_to_val[lab])
+        return toRet
+
