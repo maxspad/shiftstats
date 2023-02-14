@@ -1,2 +1,2 @@
-# residoodle
-Yet another attempt at this...
+# ShiftStats
+Useful tools for tracking the UM residency schedule
