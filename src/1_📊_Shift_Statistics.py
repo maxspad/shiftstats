@@ -41,14 +41,14 @@ DATE_FMT = "%m/%d/%y"
 
 # Configure sidebar
 with st.sidebar:
-    bd_list = {f'Year to Date: {datetime.date(2022, 7, 1).strftime(DATE_FMT)} to {datetime.date.today().strftime(DATE_FMT)}': 'YTD', 'Custom Date Range': 'Custom'}
+    bd_list = {f'Year to Date: {datetime.date(2023, 7, 1).strftime(DATE_FMT)} to {datetime.date.today().strftime(DATE_FMT)}': 'YTD', 'Custom Date Range': 'Custom'}
     for b, r in bd.iterrows():
         bd_list[f'{b}: {r["Start Date"].strftime(DATE_FMT)} to {r["End Date"].strftime(DATE_FMT)}'] = b
 
     sel = st.selectbox('Choose a block or date range:', bd_list.keys())
     sel_block = bd_list[sel]
     if sel_block == 'YTD':
-        start_date = datetime.date(2022, 7, 1)
+        start_date = datetime.date(2023, 7, 1)
         end_date = datetime.date.today()
     elif sel_block == 'Custom':
         start_date = st.date_input('Custom start date:', value=datetime.date(2022, 7, 1))
